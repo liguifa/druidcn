@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>从流数据加载数据 | druid 中文网</title>
+    <meta name="description" content="Druid是一个专门针对事件数据的OLAP查询而设计的开源数据存储系统。此页面旨在为读者介绍关于Druid存储数据的高级概述，以及Druid集群的架构。">
+    <link rel="icon" href="/imgs/favicon.png">
+    
+    <link rel="preload" href="/assets/css/0.styles.4ab36692.css" as="style"><link rel="preload" href="/assets/js/app.7684bae7.js" as="script"><link rel="preload" href="/assets/js/7.bf4683c9.js" as="script"><link rel="prefetch" href="/assets/js/10.c6568e35.js"><link rel="prefetch" href="/assets/js/11.8085fb6b.js"><link rel="prefetch" href="/assets/js/2.5dfb5464.js"><link rel="prefetch" href="/assets/js/3.fdd76a05.js"><link rel="prefetch" href="/assets/js/4.b92890f1.js"><link rel="prefetch" href="/assets/js/5.a9510b1b.js"><link rel="prefetch" href="/assets/js/6.84f350a0.js"><link rel="prefetch" href="/assets/js/8.af120a1b.js"><link rel="prefetch" href="/assets/js/9.2937fc3e.js">
+    <link rel="stylesheet" href="/assets/css/0.styles.4ab36692.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/" class="home-link router-link-active"><!----> <span class="site-name">druid 中文网</span></a> <div class="links" style="max-width:nullpx;"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/" class="nav-link">首页</a></div><div class="nav-item"><a href="http://druid.io" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  官网
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://github.com/apache/incubator-druid" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  源码
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <div class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/" class="nav-link">首页</a></div><div class="nav-item"><a href="http://druid.io" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  官网
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://github.com/apache/incubator-druid" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  源码
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav>  <ul class="sidebar-links"><li><a href="/" class="sidebar-link">概述</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/#数据" class="sidebar-link">数据</a></li><li class="sidebar-sub-header"><a href="/#汇总" class="sidebar-link">汇总</a></li><li class="sidebar-sub-header"><a href="/#分片数据" class="sidebar-link">分片数据</a></li><li class="sidebar-sub-header"><a href="/#索引数据" class="sidebar-link">索引数据</a></li><li class="sidebar-sub-header"><a href="/#记载数据" class="sidebar-link">记载数据</a></li><li class="sidebar-sub-header"><a href="/#查询数据" class="sidebar-link">查询数据</a></li><li class="sidebar-sub-header"><a href="/#集群" class="sidebar-link">集群</a></li><li class="sidebar-sub-header"><a href="/#外部依赖" class="sidebar-link">外部依赖</a></li><li class="sidebar-sub-header"><a href="/#高可用性" class="sidebar-link">高可用性</a></li></ul></li><li><a href="/架构.html" class="sidebar-link">架构</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/架构.html#系统架构" class="sidebar-link">系统架构</a></li><li class="sidebar-sub-header"><a href="/架构.html#segments" class="sidebar-link">Segments</a></li><li class="sidebar-sub-header"><a href="/架构.html#历史节点" class="sidebar-link">历史节点</a></li><li class="sidebar-sub-header"><a href="/架构.html#索引服务" class="sidebar-link">索引服务</a></li><li class="sidebar-sub-header"><a href="/架构.html#实时节点" class="sidebar-link">实时节点</a></li></ul></li><li><a href="/快速开始.html" class="sidebar-link">快速开始</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/快速开始.html#前提条件需要：" class="sidebar-link">前提条件需要：</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#启动zookeeper" class="sidebar-link">启动zookeeper</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#启动druid服务" class="sidebar-link">启动Druid服务</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/加载数据.html" class="sidebar-link">加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/加载数据.html#选择提取方法" class="sidebar-link">选择提取方法</a></li><li class="sidebar-sub-header"><a href="/加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/加载数据.html#批处理、流式混合模式" class="sidebar-link">批处理、流式混合模式</a></li></ul></li><li><a href="/从文件加载数据.html" class="sidebar-link">从文件加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/从文件加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/从文件加载数据.html#编写提取规范" class="sidebar-link">编写提取规范</a></li><li class="sidebar-sub-header"><a href="/从文件加载数据.html#运行任务" class="sidebar-link">运行任务</a></li><li class="sidebar-sub-header"><a href="/从文件加载数据.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/从流数据加载数据.html" class="active sidebar-link">从流数据加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#编写数据提取规范" class="sidebar-link">编写数据提取规范</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#重启服务" class="sidebar-link">重启服务</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#发送数据" class="sidebar-link">发送数据</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/从kafka加载数据.html" class="sidebar-link">从kafka加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#启动kafka" class="sidebar-link">启动kafka</a></li><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#发送示例数据" class="sidebar-link">发送示例数据</a></li><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/集群.html" class="sidebar-link">集群</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/集群.html#硬件要求" class="sidebar-link">硬件要求</a></li><li class="sidebar-sub-header"><a href="/集群.html#操作系统" class="sidebar-link">操作系统</a></li><li class="sidebar-sub-header"><a href="/集群.html#下载集群" class="sidebar-link">下载集群</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置deep-storage" class="sidebar-link">配置deep storage</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置tranquility服务器-可选" class="sidebar-link">配置Tranquility服务器 (可选)</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置tranquility-kafka-可选" class="sidebar-link">配置Tranquility Kafka (可选)</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置hadoop-可选" class="sidebar-link">配置Hadoop (可选)</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置druid-coordination" class="sidebar-link">配置Druid coordination</a></li><li class="sidebar-sub-header"><a href="/集群.html#调整服务查询druid进程" class="sidebar-link">调整服务查询Druid进程</a></li><li class="sidebar-sub-header"><a href="/集群.html#调整druid-brokers" class="sidebar-link">调整Druid Brokers</a></li><li class="sidebar-sub-header"><a href="/集群.html#端口开通" class="sidebar-link">端口开通</a></li><li class="sidebar-sub-header"><a href="/集群.html#启动coordinator-overlord-zookeeper-metadata-store" class="sidebar-link">启动Coordinator, Overlord, Zookeeper,  metadata store</a></li><li class="sidebar-sub-header"><a href="/集群.html#启动historicals和middlemanagers" class="sidebar-link">启动Historicals和MiddleManagers</a></li><li class="sidebar-sub-header"><a href="/集群.html#启动druid-broker" class="sidebar-link">启动Druid Broker</a></li></ul></li></ul> </div> <div class="page"> <div class="content"><h1 id="从流数据加载数据"><a href="#从流数据加载数据" aria-hidden="true" class="header-anchor">#</a> 从流数据加载数据</h1> <h2 id="入门"><a href="#入门" aria-hidden="true" class="header-anchor">#</a> 入门</h2> <p>本教程介绍如何将自己的流数据加载到Druid。
+在本教程中，我们假设您已经按照快速入门中所述下载了Druid和Tranquility，并将其在本机上运行。并且您不需要事先加载任何数据。
+完成后，您可以通过编写自定义数据提取规范来加载自己的数据集。</p> <h2 id="编写数据提取规范"><a href="#编写数据提取规范" aria-hidden="true" class="header-anchor">#</a> 编写数据提取规范</h2> <p>当使用流进行数据加载，推荐使用Stream Push方式。在本教程中使用Tranquility 通过HTTP将数据推送到Druid。
+</p><div class="tip custom-block"><p class="custom-block-title">提示</p> <p>本教程将介绍如何通过HTTP将数据流推送到Druid，但Druid还支持各类批处理和流式加载方法。查看Loading files 和 Loading streams页面来了解其它方法的更多消息，包括Hadoop、Kafka, Storm、Samza、Spark Streaming和您自己的JVM应用。</p></div>
+你可以按照需求修改conf-quickstart/tranquility/server.json配置文件，来自定义Tranquility Server配置，通过HTTP加载新的数据集。
+配置文件中有几项需要特别关注：<p></p> <div class="language- extra-class"><pre class="language-text"><code>{
+  &quot;dataSources&quot; : {
+    &quot;metrics&quot; : {
+      &quot;spec&quot; : {
+        &quot;dataSchema&quot; : {
+          //1.使用的数据集
+          &quot;dataSource&quot; : &quot;metrics&quot;,
+          &quot;parser&quot; : {
+            &quot;type&quot; : &quot;string&quot;,
+            &quot;parseSpec&quot; : {
+              //2.哪个字段是timestamp
+              &quot;timestampSpec&quot; : {
+                &quot;column&quot; : &quot;timestamp&quot;,
+                &quot;format&quot; : &quot;auto&quot;
+              },
+              &quot;dimensionsSpec&quot; : {
+                //3.哪些字段需要当成维度处理
+                &quot;dimensions&quot; : [],
+                &quot;dimensionExclusions&quot; : [
+                  &quot;timestamp&quot;,
+                  &quot;value&quot;
+                ]
+              },
+              &quot;format&quot; : &quot;json&quot;
+            }
+          },
+          &quot;granularitySpec&quot; : {
+            &quot;type&quot; : &quot;uniform&quot;,
+            &quot;segmentGranularity&quot; : &quot;hour&quot;,
+            &quot;queryGranularity&quot; : &quot;none&quot;
+          },
+          //4.哪些字段需要当成度量进行处理
+          &quot;metricsSpec&quot; : [
+            {
+              &quot;type&quot; : &quot;count&quot;,
+              &quot;name&quot; : &quot;count&quot;
+            },
+            {
+              &quot;name&quot; : &quot;value_sum&quot;,
+              &quot;type&quot; : &quot;doubleSum&quot;,
+              &quot;fieldName&quot; : &quot;value&quot;
+            },
+            {
+              &quot;fieldName&quot; : &quot;value&quot;,
+              &quot;name&quot; : &quot;value_min&quot;,
+              &quot;type&quot; : &quot;doubleMin&quot;
+            },
+            {
+              &quot;type&quot; : &quot;doubleMax&quot;,
+              &quot;name&quot; : &quot;value_max&quot;,
+              &quot;fieldName&quot; : &quot;value&quot;
+            }
+          ]
+        },
+        &quot;ioConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;
+        },
+        &quot;tuningConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;,
+          &quot;maxRowsInMemory&quot; : &quot;100000&quot;,
+          &quot;intermediatePersistPeriod&quot; : &quot;PT10M&quot;,
+          &quot;windowPeriod&quot; : &quot;PT10M&quot;
+        }
+      },
+      &quot;properties&quot; : {
+        &quot;task.partitions&quot; : &quot;1&quot;,
+        &quot;task.replicants&quot; : &quot;1&quot;
+      }
+    }
+  },
+  &quot;properties&quot; : {
+    &quot;zookeeper.connect&quot; : &quot;localhost&quot;,
+    &quot;druid.discovery.curator.path&quot; : &quot;/druid/discovery&quot;,
+    &quot;druid.selectors.indexing.serviceName&quot; : &quot;druid/overlord&quot;,
+    &quot;http.port&quot; : &quot;8200&quot;,
+    &quot;http.threads&quot; : &quot;8&quot;
+  }
+}
+</code></pre></div><p>下面用一个pageviews(浏览量)的json作为示例：</p> <div class="language- extra-class"><pre class="language-text"><code>{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/foo/bar&quot;, &quot;user&quot;: &quot;alice&quot;, &quot;latencyMs&quot;: 32}
+</code></pre></div><p>所以对于这个例子上述四个问题的答案是：</p> <ul><li>数据集就是pageviews</li> <li>time字段是timestamp</li> <li>可以用url和user作为维度
+度量可以是计算pageviews计数，和latencyMs字段求和。在数据接收阶段求和，也能在查询的时候快速方便的求平均值。</li></ul> <p>所以配置文件修改后</p> <div class="language- extra-class"><pre class="language-text"><code>{
+  &quot;dataSources&quot; : {
+    &quot;metrics&quot; : {
+      &quot;spec&quot; : {
+        &quot;dataSchema&quot; : {
+          //1.使用的数据集
+          &quot;dataSource&quot; : &quot;pageviews&quot;,
+          &quot;parser&quot; : {
+            &quot;type&quot; : &quot;string&quot;,
+            &quot;parseSpec&quot; : {
+              //2.哪个字段是timestamp
+              &quot;timestampSpec&quot; : {
+                &quot;column&quot; : &quot;time&quot;,
+                &quot;format&quot; : &quot;auto&quot;
+              },
+              &quot;dimensionsSpec&quot; : {
+                //3.哪些字段需要当成维度处理
+                &quot;dimensions&quot; : [&quot;url&quot;, &quot;user&quot;],
+                &quot;dimensionExclusions&quot; : [
+                  &quot;timestamp&quot;,
+                  &quot;value&quot;
+                ]
+              },
+              &quot;format&quot; : &quot;json&quot;
+            }
+          },
+          &quot;granularitySpec&quot; : {
+            &quot;type&quot; : &quot;uniform&quot;,
+            &quot;segmentGranularity&quot; : &quot;hour&quot;,
+            &quot;queryGranularity&quot; : &quot;none&quot;
+          },
+          //4.哪些字段需要当成度量进行处理
+          &quot;metricsSpec&quot; : [
+            {
+              &quot;name&quot;: &quot;views&quot;,
+              &quot;type&quot;: &quot;count&quot;
+            },
+            {
+              &quot;name&quot;: &quot;latencyMs&quot;, 
+              &quot;type&quot;: &quot;doubleSum&quot;, 
+              &quot;fieldName&quot;: &quot;latencyMs&quot;
+            }
+          ]
+        },
+        &quot;ioConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;
+        },
+        &quot;tuningConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;,
+          &quot;maxRowsInMemory&quot; : &quot;100000&quot;,
+          &quot;intermediatePersistPeriod&quot; : &quot;PT10M&quot;,
+          &quot;windowPeriod&quot; : &quot;PT10M&quot;
+        }
+      },
+      &quot;properties&quot; : {
+        &quot;task.partitions&quot; : &quot;1&quot;,
+        &quot;task.replicants&quot; : &quot;1&quot;
+      }
+    }
+  },
+  &quot;properties&quot; : {
+    &quot;zookeeper.connect&quot; : &quot;localhost&quot;,
+    &quot;druid.discovery.curator.path&quot; : &quot;/druid/discovery&quot;,
+    &quot;druid.selectors.indexing.serviceName&quot; : &quot;druid/overlord&quot;,
+    &quot;http.port&quot; : &quot;8200&quot;,
+    &quot;http.threads&quot; : &quot;8&quot;
+  }
+}
+</code></pre></div><h2 id="重启服务"><a href="#重启服务" aria-hidden="true" class="header-anchor">#</a> 重启服务</h2> <p>停止Tranquility（CTRL-C）并重新启动，来获取新的配置文件并生效。</p> <h2 id="发送数据"><a href="#发送数据" aria-hidden="true" class="header-anchor">#</a> 发送数据</h2> <p>发送测试数据如下：</p> <div class="language- extra-class"><pre class="language-text"><code>{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/foo/bar&quot;, &quot;user&quot;: &quot;alice&quot;, &quot;latencyMs&quot;: 32}
+{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/&quot;, &quot;user&quot;: &quot;bob&quot;, &quot;latencyMs&quot;: 11}
+{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/foo/bar&quot;, &quot;user&quot;: &quot;bob&quot;, &quot;latencyMs&quot;: 45}
+</code></pre></div><p>Druid流处理需要相对当前（准实时）的数据，相而言windowPeriod值控制的是更宽松的时间窗口（也就是流处理会检查数据timestamp的值，而时间窗口只关注数据接收的时间）。所以需要将2000-01-01T00:00:00Z转换为ISO8601格式的当前系统时间，你可以用以下命令转换：</p> <div class="language- extra-class"><pre class="language-text"><code>python -c 'import datetime; print(datetime.datetime.utcnow().strftime(&quot;%Y-%m-%dT%H:%M:%SZ&quot;))'
+</code></pre></div><p>用输出的时间将上述的json示例的timestamps更新，并且保存到pageviews.json文件里。 通过下面命令将数据发送到Druid：</p> <div class="language- extra-class"><pre class="language-text"><code>curl -XPOST -H'Content-Type: application/json' --data-binary @pageviews.json http://localhost:8200/v1/post/pageviews
+</code></pre></div><p>然后你会看到屏幕输出如下：</p> <div class="language- extra-class"><pre class="language-text"><code>{&quot;result&quot;:{&quot;received&quot;:3,&quot;sent&quot;:3}}
+</code></pre></div><p>这表明HTTP服务接收了三条事件，并且发送了三条到Druid。因为需要分配Druid给ingestion 任务，所以初次运行可能会消耗几秒钟时间。但是后续查询请求就会变得很快了。
+如果你看到是&quot;sent&quot;:0，很有可能是时间戳（timestamps）不够新，再次更新时间戳并且重新发送。</p> <h2 id="数据查询"><a href="#数据查询" aria-hidden="true" class="header-anchor">#</a> 数据查询</h2> <p>数据发送后就可以马上进行数据查询了</p></div> <div class="page-edit"><!----> <!----></div> <!----> </div> <!----></div></div>
+    <script src="/assets/js/app.7684bae7.js" defer></script><script src="/assets/js/7.bf4683c9.js" defer></script>
+  </body>
+</html>

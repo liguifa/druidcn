@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>从kafka加载数据 | druid 中文网</title>
+    <meta name="description" content="Druid是一个专门针对事件数据的OLAP查询而设计的开源数据存储系统。此页面旨在为读者介绍关于Druid存储数据的高级概述，以及Druid集群的架构。">
+    <link rel="icon" href="/imgs/favicon.png">
+    
+    <link rel="preload" href="/assets/css/0.styles.4ab36692.css" as="style"><link rel="preload" href="/assets/js/app.7684bae7.js" as="script"><link rel="preload" href="/assets/js/5.a9510b1b.js" as="script"><link rel="prefetch" href="/assets/js/10.c6568e35.js"><link rel="prefetch" href="/assets/js/11.8085fb6b.js"><link rel="prefetch" href="/assets/js/2.5dfb5464.js"><link rel="prefetch" href="/assets/js/3.fdd76a05.js"><link rel="prefetch" href="/assets/js/4.b92890f1.js"><link rel="prefetch" href="/assets/js/6.84f350a0.js"><link rel="prefetch" href="/assets/js/7.bf4683c9.js"><link rel="prefetch" href="/assets/js/8.af120a1b.js"><link rel="prefetch" href="/assets/js/9.2937fc3e.js">
+    <link rel="stylesheet" href="/assets/css/0.styles.4ab36692.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/" class="home-link router-link-active"><!----> <span class="site-name">druid 中文网</span></a> <div class="links" style="max-width:nullpx;"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/" class="nav-link">首页</a></div><div class="nav-item"><a href="http://druid.io" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  官网
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://github.com/apache/incubator-druid" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  源码
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <div class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/" class="nav-link">首页</a></div><div class="nav-item"><a href="http://druid.io" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  官网
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div><div class="nav-item"><a href="https://github.com/apache/incubator-druid" target="_blank" rel="noopener noreferrer" class="nav-link external">
+  源码
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15" class="icon outbound"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path> <polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg></a></div> <!----></nav>  <ul class="sidebar-links"><li><a href="/" class="sidebar-link">概述</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/#数据" class="sidebar-link">数据</a></li><li class="sidebar-sub-header"><a href="/#汇总" class="sidebar-link">汇总</a></li><li class="sidebar-sub-header"><a href="/#分片数据" class="sidebar-link">分片数据</a></li><li class="sidebar-sub-header"><a href="/#索引数据" class="sidebar-link">索引数据</a></li><li class="sidebar-sub-header"><a href="/#记载数据" class="sidebar-link">记载数据</a></li><li class="sidebar-sub-header"><a href="/#查询数据" class="sidebar-link">查询数据</a></li><li class="sidebar-sub-header"><a href="/#集群" class="sidebar-link">集群</a></li><li class="sidebar-sub-header"><a href="/#外部依赖" class="sidebar-link">外部依赖</a></li><li class="sidebar-sub-header"><a href="/#高可用性" class="sidebar-link">高可用性</a></li></ul></li><li><a href="/架构.html" class="sidebar-link">架构</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/架构.html#系统架构" class="sidebar-link">系统架构</a></li><li class="sidebar-sub-header"><a href="/架构.html#segments" class="sidebar-link">Segments</a></li><li class="sidebar-sub-header"><a href="/架构.html#历史节点" class="sidebar-link">历史节点</a></li><li class="sidebar-sub-header"><a href="/架构.html#索引服务" class="sidebar-link">索引服务</a></li><li class="sidebar-sub-header"><a href="/架构.html#实时节点" class="sidebar-link">实时节点</a></li></ul></li><li><a href="/快速开始.html" class="sidebar-link">快速开始</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/快速开始.html#前提条件需要：" class="sidebar-link">前提条件需要：</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#启动zookeeper" class="sidebar-link">启动zookeeper</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#启动druid服务" class="sidebar-link">启动Druid服务</a></li><li class="sidebar-sub-header"><a href="/快速开始.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/加载数据.html" class="sidebar-link">加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/加载数据.html#选择提取方法" class="sidebar-link">选择提取方法</a></li><li class="sidebar-sub-header"><a href="/加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/加载数据.html#批处理、流式混合模式" class="sidebar-link">批处理、流式混合模式</a></li></ul></li><li><a href="/从文件加载数据.html" class="sidebar-link">从文件加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/从文件加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/从文件加载数据.html#编写提取规范" class="sidebar-link">编写提取规范</a></li><li class="sidebar-sub-header"><a href="/从文件加载数据.html#运行任务" class="sidebar-link">运行任务</a></li><li class="sidebar-sub-header"><a href="/从文件加载数据.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/从流数据加载数据.html" class="sidebar-link">从流数据加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#编写数据提取规范" class="sidebar-link">编写数据提取规范</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#重启服务" class="sidebar-link">重启服务</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#发送数据" class="sidebar-link">发送数据</a></li><li class="sidebar-sub-header"><a href="/从流数据加载数据.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/从kafka加载数据.html" class="active sidebar-link">从kafka加载数据</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#入门" class="sidebar-link">入门</a></li><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#启动kafka" class="sidebar-link">启动kafka</a></li><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#发送示例数据" class="sidebar-link">发送示例数据</a></li><li class="sidebar-sub-header"><a href="/从kafka加载数据.html#数据查询" class="sidebar-link">数据查询</a></li></ul></li><li><a href="/集群.html" class="sidebar-link">集群</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/集群.html#硬件要求" class="sidebar-link">硬件要求</a></li><li class="sidebar-sub-header"><a href="/集群.html#操作系统" class="sidebar-link">操作系统</a></li><li class="sidebar-sub-header"><a href="/集群.html#下载集群" class="sidebar-link">下载集群</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置deep-storage" class="sidebar-link">配置deep storage</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置tranquility服务器-可选" class="sidebar-link">配置Tranquility服务器 (可选)</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置tranquility-kafka-可选" class="sidebar-link">配置Tranquility Kafka (可选)</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置hadoop-可选" class="sidebar-link">配置Hadoop (可选)</a></li><li class="sidebar-sub-header"><a href="/集群.html#配置druid-coordination" class="sidebar-link">配置Druid coordination</a></li><li class="sidebar-sub-header"><a href="/集群.html#调整服务查询druid进程" class="sidebar-link">调整服务查询Druid进程</a></li><li class="sidebar-sub-header"><a href="/集群.html#调整druid-brokers" class="sidebar-link">调整Druid Brokers</a></li><li class="sidebar-sub-header"><a href="/集群.html#端口开通" class="sidebar-link">端口开通</a></li><li class="sidebar-sub-header"><a href="/集群.html#启动coordinator-overlord-zookeeper-metadata-store" class="sidebar-link">启动Coordinator, Overlord, Zookeeper,  metadata store</a></li><li class="sidebar-sub-header"><a href="/集群.html#启动historicals和middlemanagers" class="sidebar-link">启动Historicals和MiddleManagers</a></li><li class="sidebar-sub-header"><a href="/集群.html#启动druid-broker" class="sidebar-link">启动Druid Broker</a></li></ul></li></ul> </div> <div class="page"> <div class="content"><h1 id="从kafka加载数据"><a href="#从kafka加载数据" aria-hidden="true" class="header-anchor">#</a> 从kafka加载数据</h1> <h2 id="入门"><a href="#入门" aria-hidden="true" class="header-anchor">#</a> 入门</h2> <p>本教程讲述如何通过kafka加载数据到Druid。
+在本教程中，我们假设您已经按照快速入门中所述下载了Druid和Tranquility，并将其在本机上运行。并且您不需要事先加载数据。</p> <div class="tip custom-block"><p class="custom-block-title">提示</p> <p>本教程会指导如何通过kafka向Druid加载数据，但Druid还支持多种批量和流式加载数据的方法。可以通过 Loading files and Loading streams页面来学习其它更多数据加载的方法。包括 Hadoop、HTTP、Storm、Samza、Spark Streaming以及自研的JVM应用</p></div> <h2 id="启动kafka"><a href="#启动kafka" aria-hidden="true" class="header-anchor">#</a> 启动kafka</h2> <p>Apache Kafka是一个高吞吐量的消息中间件，可以和Druid配合使用。本教程中使用的是Kafka 0.9.0.0，可以通过如下指令下载kafka：</p> <div class="language- extra-class"><pre class="language-text"><code>curl -O http://www.us.apache.org/dist/kafka/0.9.0.0/kafka_2.11-0.9.0.0.tgz
+tar -xzf kafka_2.11-0.9.0.0.tgz
+cd kafka_2.11-0.9.0.0
+</code></pre></div><p>执行如下指令启动kafka broker：</p> <div class="language- extra-class"><pre class="language-text"><code>./bin/kafka-server-start.sh config/server.properties
+</code></pre></div><p>创建一个名称为metrics的topic用来接收数据：</p> <div class="language- extra-class"><pre class="language-text"><code>./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic metrics
+</code></pre></div><h2 id="发送示例数据"><a href="#发送示例数据" aria-hidden="true" class="header-anchor">#</a> 发送示例数据</h2> <p>下面就可以开始通过console producer向kafka对应的topic发送数据了！
+在Druid目录下执行如下指令：</p> <div class="language- extra-class"><pre class="language-text"><code>bin/generate-example-metrics 
+</code></pre></div><p>在kafka目录下执行：</p> <div class="language- extra-class"><pre class="language-text"><code>./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic metrics
+</code></pre></div><p>现在kafka-console-producer就开始等待数据的输入了，复制刚生成的示例数据并粘贴到kafka-console-producer控制台终端，回车确认。当然也可以复制更多数据到终端，或者CTRL-D退出。
+现在就可以进行数据查询了，当然也可以参考下文去加载自定义数据集。</p> <h2 id="数据查询"><a href="#数据查询" aria-hidden="true" class="header-anchor">#</a> 数据查询</h2> <p>数据发送完成后就可以进行数据查询了，使用方法详见 supported query methods.
+加载自定义数据
+目前为止，我们已经按照Druid发布版本中的数据提取规范，将数据从kafka加载到了Druid。每一个数据提取规范都是为了特定的数据集设计的，也可以通过自定义提取规范来加载自定义数据。
+自定义数据提取规范，可以按需修改conf-quickstart/tranquility/kafka.json配置文件</p> <ul><li>dataSchema，使用的数据集名称</li> <li>timestampSpec，哪个是时间字段</li> <li>dimensionsSpec，哪些能作为维度字段</li> <li>metricsSpec，哪些能作为度量进行计算</li></ul> <div class="language- extra-class"><pre class="language-text"><code>{
+  &quot;dataSources&quot; : {
+    &quot;metrics-kafka&quot; : {
+      &quot;spec&quot; : {
+        &quot;dataSchema&quot; : {
+          &quot;dataSource&quot; : &quot;metrics-kafka&quot;,
+          &quot;parser&quot; : {
+            &quot;type&quot; : &quot;string&quot;,
+            &quot;parseSpec&quot; : {
+              &quot;timestampSpec&quot; : {
+                &quot;column&quot; : &quot;timestamp&quot;,
+                &quot;format&quot; : &quot;auto&quot;
+              },
+              &quot;dimensionsSpec&quot; : {
+                &quot;dimensions&quot; : [],
+                &quot;dimensionExclusions&quot; : [
+                  &quot;timestamp&quot;,
+                  &quot;value&quot;
+                ]
+              },
+              &quot;format&quot; : &quot;json&quot;
+            }
+          },
+          &quot;granularitySpec&quot; : {
+            &quot;type&quot; : &quot;uniform&quot;,
+            &quot;segmentGranularity&quot; : &quot;hour&quot;,
+            &quot;queryGranularity&quot; : &quot;none&quot;
+          },
+          &quot;metricsSpec&quot; : [
+            {
+              &quot;type&quot; : &quot;count&quot;,
+              &quot;name&quot; : &quot;count&quot;
+            },
+            {
+              &quot;name&quot; : &quot;value_sum&quot;,
+              &quot;type&quot; : &quot;doubleSum&quot;,
+              &quot;fieldName&quot; : &quot;value&quot;
+            },
+            {
+              &quot;fieldName&quot; : &quot;value&quot;,
+              &quot;name&quot; : &quot;value_min&quot;,
+              &quot;type&quot; : &quot;doubleMin&quot;
+            },
+            {
+              &quot;type&quot; : &quot;doubleMax&quot;,
+              &quot;name&quot; : &quot;value_max&quot;,
+              &quot;fieldName&quot; : &quot;value&quot;
+            }
+          ]
+        },
+        &quot;ioConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;
+        },
+        &quot;tuningConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;,
+          &quot;maxRowsInMemory&quot; : &quot;100000&quot;,
+          &quot;intermediatePersistPeriod&quot; : &quot;PT10M&quot;,
+          &quot;windowPeriod&quot; : &quot;PT10M&quot;
+        }
+      },
+      &quot;properties&quot; : {
+        &quot;task.partitions&quot; : &quot;1&quot;,
+        &quot;task.replicants&quot; : &quot;1&quot;,
+        &quot;topicPattern&quot; : &quot;metrics&quot;
+      }
+    }
+  },
+  &quot;properties&quot; : {
+    &quot;zookeeper.connect&quot; : &quot;localhost&quot;,
+    &quot;druid.discovery.curator.path&quot; : &quot;/druid/discovery&quot;,
+    &quot;druid.selectors.indexing.serviceName&quot; : &quot;druid/overlord&quot;,
+    &quot;commit.periodMillis&quot; : &quot;15000&quot;,
+    &quot;consumer.numThreads&quot; : &quot;2&quot;,
+    &quot;kafka.zookeeper.connect&quot; : &quot;localhost&quot;,
+    &quot;kafka.group.id&quot; : &quot;tranquility-kafka&quot;
+  }
+}
+</code></pre></div><p>下面使用网页浏览为例并将输入发送到pageviews的topic里，示例数据如下：</p> <div class="language- extra-class"><pre class="language-text"><code>{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/foo/bar&quot;, &quot;user&quot;: &quot;alice&quot;, &quot;latencyMs&quot;: 32}
+</code></pre></div><p>首先创建topic</p> <div class="language- extra-class"><pre class="language-text"><code>./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic pageviews
+</code></pre></div><p>修改conf-quickstart/tranquility/kafka.json配置文件，修改后：</p> <div class="language- extra-class"><pre class="language-text"><code>{
+  &quot;dataSources&quot; : {
+    &quot;metrics-kafka&quot; : {
+      &quot;spec&quot; : {
+        &quot;dataSchema&quot; : {
+          &quot;dataSource&quot; : &quot;pageviews-kafka&quot;,
+          &quot;parser&quot; : {
+            &quot;type&quot; : &quot;string&quot;,
+            &quot;parseSpec&quot; : {
+              &quot;timestampSpec&quot; : {
+                &quot;column&quot; : &quot;time&quot;,
+                &quot;format&quot; : &quot;auto&quot;
+              },
+              &quot;dimensionsSpec&quot; : {
+                &quot;dimensions&quot; : [&quot;url&quot;, &quot;user&quot;],
+                &quot;dimensionExclusions&quot; : [
+                  &quot;timestamp&quot;,
+                  &quot;value&quot;
+                ]
+              },
+              &quot;format&quot; : &quot;json&quot;
+            }
+          },
+          &quot;granularitySpec&quot; : {
+            &quot;type&quot; : &quot;uniform&quot;,
+            &quot;segmentGranularity&quot; : &quot;hour&quot;,
+            &quot;queryGranularity&quot; : &quot;none&quot;
+          },
+          &quot;metricsSpec&quot; : [
+            {
+              &quot;name&quot;: &quot;views&quot;,
+             &quot;type&quot;: &quot;count&quot;
+            },
+           {
+              &quot;name&quot;: &quot;latencyMs&quot;, 
+              &quot;type&quot;: &quot;doubleSum&quot;,
+              &quot;fieldName&quot;: &quot;latencyMs&quot;
+            }
+          ]
+        },
+        &quot;ioConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;
+        },
+        &quot;tuningConfig&quot; : {
+          &quot;type&quot; : &quot;realtime&quot;,
+          &quot;maxRowsInMemory&quot; : &quot;100000&quot;,
+          &quot;intermediatePersistPeriod&quot; : &quot;PT10M&quot;,
+          &quot;windowPeriod&quot; : &quot;PT10M&quot;
+        }
+      },
+      &quot;properties&quot; : {
+        &quot;task.partitions&quot; : &quot;1&quot;,
+        &quot;task.replicants&quot; : &quot;1&quot;,
+        &quot;topicPattern&quot; : &quot;pageviews&quot;
+      }
+    }
+  },
+  &quot;properties&quot; : {
+    &quot;zookeeper.connect&quot; : &quot;localhost&quot;,
+    &quot;druid.discovery.curator.path&quot; : &quot;/druid/discovery&quot;,
+    &quot;druid.selectors.indexing.serviceName&quot; : &quot;druid/overlord&quot;,
+    &quot;commit.periodMillis&quot; : &quot;15000&quot;,
+    &quot;consumer.numThreads&quot; : &quot;2&quot;,
+    &quot;kafka.zookeeper.connect&quot; : &quot;localhost&quot;,
+    &quot;kafka.group.id&quot; : &quot;tranquility-kafka&quot;
+  }
+}
+</code></pre></div><p>下面启动Druid的kafka提取服务：</p> <div class="language- extra-class"><pre class="language-text"><code>bin/tranquility kafka -configFile ../druid-0.9.2/conf-quickstart/tranquility/kafka.json
+</code></pre></div><p>如果Tranquility或者kafka已经启动，可以停止并重新启动。</p> <p>最后将数据发送到kafka的topic，以下面这些数据为例：</p> <div class="language- extra-class"><pre class="language-text"><code>{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/foo/bar&quot;, &quot;user&quot;: &quot;alice&quot;, &quot;latencyMs&quot;: 32}
+{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/&quot;, &quot;user&quot;: &quot;bob&quot;, &quot;latencyMs&quot;: 11}
+{&quot;time&quot;: &quot;2000-01-01T00:00:00Z&quot;, &quot;url&quot;: &quot;/foo/bar&quot;, &quot;user&quot;: &quot;bob&quot;, &quot;latencyMs&quot;: 45}
+</code></pre></div><p>Druid流处理需要相对当前（准实时）的数据，相而言windowPeriod值控制的是更宽松的时间窗口（也就是流处理会检查数据timestamp的值，而时间窗口只关注数据接收的时间）。所以需要将2000-01-01T00:00:00Z转换为ISO8601格式的当前系统时间，你可以用以下命令转换：</p> <div class="language- extra-class"><pre class="language-text"><code>python -c 'import datetime; print(datetime.datetime.utcnow().strftime(&quot;%Y-%m-%dT%H:%M:%SZ&quot;))'
+</code></pre></div><p>更新上述JSON中的时间戳，然后将这些消息复制并粘贴到此kafka-console-producer，然后按Enter键：</p> <div class="language- extra-class"><pre class="language-text"><code>./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic pageviews
+</code></pre></div><p>就这样，数据应该已经保存在Druid里了，可以使用任何Druid支持的查询方式查询这些数据了。</p></div> <div class="page-edit"><!----> <!----></div> <!----> </div> <!----></div></div>
+    <script src="/assets/js/app.7684bae7.js" defer></script><script src="/assets/js/5.a9510b1b.js" defer></script>
+  </body>
+</html>
